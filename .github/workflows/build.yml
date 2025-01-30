@@ -1,0 +1,23 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: large
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tinfoilanalytics/pri-build-action@main
+        with:
+          model: deepseek-r1:70b
+          domain: inference.delta.tinfoil.sh
+          github-token: ${{ secrets.GITHUB_TOKEN }}
