@@ -16,8 +16,47 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: tinfoilsh/pri-build-action@v0.0.4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create deployment manifest
+        shell: bash
+        run: |
+          docker run --rm \
+            -v $(pwd)/output:/output \
+            -e INFERENCE_IMAGE_VERSION=0.0.6 \
+            -e OVMF_VERSION=0.0.2 \
+            -e CPUS=16 \
+            -e DOMAIN=inference.tinfoil.sh \
+            -e MODEL=deepseek-r1:70b \
+            ghcr.io/tinfoilsh/pri-build-action:0.0.4
+
+      - name: Hash deployment manifest
+        shell: bash
+        run: |
+          sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1 > output/tinfoil.hash
+
+      - name: Attest
+        uses: actions/attest@v1
+        id: attest
         with:
-          model: deepseek-r1:70b
-          domain: inference.delta.tinfoil.sh
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          subject-digest: output/tinfoil.hash
+          predicate-type: https://tinfoil.sh/predicate/snp-sev-guest/v1
+          predicate-path: output/tinfoil-deployment.json
+
+      - name: Generate release notes
+        id: generate-release-notes
+        shell: bash
+        run: |
+          RELEASE_NOTES=$(cat output/release.md)
+          echo "release-notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${RELEASE_NOTES}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            output/tinfoil-deployment.json
+          body: ${{ steps.generate-release-notes.outputs.release-notes }}
