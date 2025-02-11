@@ -35,13 +35,13 @@ jobs:
       - name: Hash deployment manifest
         shell: bash
         run: |
-          sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1 > output/tinfoil.hash
+          sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1 > tinfoil.hash
 
       - name: Attest
         uses: actions/attest@v1
         id: attest
         with:
-          subject-digest: output/tinfoil.hash
+          subject-digest: tinfoil.hash
           predicate-type: https://tinfoil.sh/predicate/snp-sev-guest/v1
           predicate-path: output/tinfoil-deployment.json
 
